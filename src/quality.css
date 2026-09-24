@@ -1,0 +1,59 @@
+.select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.select-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.select-row span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.select-row small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.select-row select {
+  width: min(240px, 46%);
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.landing-select-row {
+  width: min(100%, 520px);
+  margin-top: 18px;
+}
+
+.compact-select-row {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 720px) {
+  .select-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .select-row select {
+    width: 100%;
+  }
+}
