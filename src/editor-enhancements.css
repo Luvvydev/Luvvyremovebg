@@ -1,0 +1,133 @@
+.cutout-original-overlay {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 70ms ease;
+  will-change: left, top, width, height, opacity;
+}
+
+.cutout-original-overlay.restore-reference-preview {
+  opacity: .26;
+}
+
+.cutout-original-overlay.full-original-preview {
+  opacity: 1;
+}
+
+.cutout-brush-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,.96);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(14,20,28,.72), 0 2px 8px rgba(0,0,0,.18);
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: top left;
+  transition: width 50ms linear, height 50ms linear, border-color 100ms ease, opacity 70ms ease;
+  will-change: transform, width, height;
+}
+
+.cutout-brush-cursor.visible {
+  opacity: 1;
+}
+
+.cutout-brush-cursor[data-tool="erase"] {
+  border-color: rgba(255,255,255,.98);
+  box-shadow: 0 0 0 1px rgba(227,72,86,.95), 0 2px 8px rgba(0,0,0,.18);
+}
+
+.cutout-brush-cursor[data-tool="restore"] {
+  border-color: rgba(255,255,255,.98);
+  box-shadow: 0 0 0 1px rgba(47,118,242,.98), 0 2px 8px rgba(0,0,0,.18);
+}
+
+.brush-hardness-ring {
+  display: block;
+  border: 1px solid rgba(255,255,255,.9);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(14,20,28,.35);
+  pointer-events: none;
+}
+
+#editorCanvas.enhanced-brush-active {
+  cursor: none !important;
+}
+
+.original-preview-badge {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  z-index: 22;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 90ms ease, transform 90ms ease;
+}
+
+.original-preview-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.original-preview-badge.reference {
+  color: var(--muted);
+}
+
+.original-preview-control {
+  margin: -6px 0 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.original-preview-control small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.original-preview-button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+  touch-action: none;
+}
+
+.original-preview-button:active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  transform: translateY(0);
+}
+
+.preview-eye {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.zoom-controls {
+  z-index: 30;
+}
