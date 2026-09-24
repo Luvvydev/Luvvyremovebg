@@ -1,4 +1,5 @@
 import { pipeline, env } from '@huggingface/transformers';
+import './quality.css';
 
 env.allowRemoteModels = true;
 env.allowLocalModels = false;
