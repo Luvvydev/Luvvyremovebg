@@ -4,7 +4,8 @@ A private, browser based background remover and cutout editor built for GitHub P
 
 ## What works
 
-- Local automatic background removal in the browser
+- Quality automatic background removal with BRIA RMBG 2.0 in the browser
+- Fast IMG.LY IS-Net fallback engine
 - Full resolution editable alpha mask
 - Erase and restore brushes with hardness and size controls
 - Undo and redo
@@ -25,7 +26,7 @@ A private, browser based background remover and cutout editor built for GitHub P
 
 Image processing happens in the browser. Luvvy removebg does not upload the user's image to an application server.
 
-The first background removal downloads the model and WebAssembly runtime required by `@imgly/background-removal`. The browser caches those resources for later use.
+Quality mode downloads the quantized BRIA RMBG 2.0 web model on first use, then the browser cache is reused. The quality model is roughly 366 MB. Fast mode uses the smaller IMG.LY IS-Net stack. Both run locally in the browser.
 
 ## Local development
 
@@ -50,4 +51,4 @@ The Vite base path is configured for:
 
 ## License
 
-This project uses `@imgly/background-removal`, which is distributed under the GNU Affero General Public License v3. This repository is therefore distributed under AGPL 3.0. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+The application code is distributed under AGPL 3.0 because it includes `@imgly/background-removal`. Quality mode also loads BRIA RMBG 2.0 model weights under CC BY-NC 4.0 for personal, non-commercial use. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
