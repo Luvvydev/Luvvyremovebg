@@ -1,15 +1,17 @@
-import removeBackground from '@imgly/background-removal';
+import { removeBackground } from '@imgly/background-removal';
+import { removeBackgroundQuality } from './quality-engine.js';
 import './styles.css';
+
+const FAST_MODEL_NAME = 'isnet_fp16';
 
 const app = document.querySelector('#app');
 
 const state = {
   theme: localStorage.getItem('luvvy-theme') || 'light',
+  engine: localStorage.getItem('luvvy-engine') || 'quality',
   file: null,
   originalImage: null,
   originalObjectUrl: null,
-  cutoutImage: null,
-  cutoutObjectUrl: null,
   width: 0,
   height: 0,
   originalAlpha: null,
@@ -39,6 +41,7 @@ const state = {
   adjust: { brightness: 100, contrast: 100, saturation: 100 },
   design: { scale: 100, offsetX: 0, offsetY: 0 },
   processing: false,
+  processingWarning: '',
   progress: 0,
   progressLabel: '',
   canvas: null,
@@ -58,6 +61,15 @@ function setTheme(theme) {
   });
 }
 
+function setEngine(engine) {
+  state.engine = engine === 'fast' ? 'fast' : 'quality';
+  localStorage.setItem('luvvy-engine', state.engine);
+}
+
+function engineLabel(engine = state.engine) {
+  return engine === 'quality' ? 'Quality · BRIA RMBG 2.0' : 'Fast · IMG.LY IS-Net';
+}
+
 function icon(name) {
   const icons = {
     moon: '<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.7 6.7 0 0 0 21 12.8Z"/>',
@@ -67,7 +79,6 @@ function icon(name) {
     chevron: '<path d="m8 10 4 4 4-4"/>',
     undo: '<path d="M9 7H4v-5M4 7c2.1-2.3 5-3.5 8-3.1A8 8 0 1 1 5.2 16"/>',
     redo: '<path d="M15 7h5v-5M20 7c-2.1-2.3-5-3.5-8-3.1A8 8 0 1 0 18.8 16"/>',
-    zoomin: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/>',
     close: '<path d="m6 6 12 12M18 6 6 18"/>',
     download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
     image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 19"/>',
@@ -111,6 +122,16 @@ function renderLanding() {
               <span>or paste an image</span>
             </div>
           </div>
+          <label class="select-row landing-select-row">
+            <div>
+              <span>Automatic cutout engine</span>
+              <small>Quality is the default. First run downloads about 366 MB, then the browser cache is reused.</small>
+            </div>
+            <select id="landingEngine">
+              <option value="quality" ${state.engine === 'quality' ? 'selected' : ''}>Quality · BRIA RMBG 2.0</option>
+              <option value="fast" ${state.engine === 'fast' ? 'selected' : ''}>Fast · IMG.LY IS-Net</option>
+            </select>
+          </label>
           <p class="upload-note">PNG, JPG or WebP. Your image never leaves this device.</p>
         </div>
       </section>
@@ -138,8 +159,8 @@ function legalModalMarkup() {
           <button class="icon-button" data-close-modal aria-label="Close">${icon('close')}</button>
         </div>
         <p>Images are processed in your browser. This site does not upload your image to a Luvvy removebg server.</p>
-        <p>Background removal uses <strong>@imgly/background-removal</strong>, licensed under the GNU AGPL v3. Source code for this site is available in the repository.</p>
-        <p class="muted">No warranty is provided. See the repository LICENSE and THIRD_PARTY_NOTICES files for complete license information.</p>
+        <p><strong>Quality mode</strong> uses BRIA RMBG 2.0 Web under a non-commercial license, which matches this personal-use project. <strong>Fast mode</strong> uses <code>@imgly/background-removal</code>, distributed under the GNU AGPL v3.</p>
+        <p class="muted">See the repository LICENSE and THIRD_PARTY_NOTICES files for complete license information.</p>
       </div>
     </div>`;
 }
@@ -172,6 +193,7 @@ function bindLanding() {
     setTheme(state.theme === 'dark' ? 'light' : 'dark');
     renderLanding();
   });
+  document.querySelector('#landingEngine').addEventListener('change', (e) => setEngine(e.target.value));
   const legal = document.querySelector('#legalModal');
   const openLegal = () => legal.classList.remove('hidden');
   document.querySelector('#privacyBtn').addEventListener('click', openLegal);
@@ -185,6 +207,7 @@ async function beginFile(file) {
   if (!file.type.startsWith('image/')) return;
   state.file = file;
   state.processing = true;
+  state.processingWarning = '';
   renderProcessing();
   try {
     if (state.originalObjectUrl) URL.revokeObjectURL(state.originalObjectUrl);
@@ -194,6 +217,7 @@ async function beginFile(file) {
     state.height = state.originalImage.naturalHeight;
     await runRemoval(file);
     buildMaskState();
+    state.feather = 0;
     state.processing = false;
     state.activeTab = 'cutout';
     state.undoStack = [];
@@ -202,8 +226,10 @@ async function beginFile(file) {
     state.panX = 0;
     state.panY = 0;
     renderEditor();
+    if (state.processingWarning) showToast(state.processingWarning, 'error');
   } catch (error) {
     console.error(error);
+    state.processing = false;
     renderLanding();
     showToast(`Background removal failed: ${error?.message || 'Unknown error'}`, 'error');
   }
@@ -219,25 +245,51 @@ function renderProcessing() {
       <section class="processing-card">
         <div class="spinner"></div>
         <h1>Cutting out your image</h1>
-        <p id="progressLabel">Preparing local model…</p>
+        <p id="progressLabel">Preparing ${engineLabel().toLowerCase()}…</p>
         <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-        <span class="processing-note">The first run downloads the background removal model. Later edits are much faster.</span>
+        <span class="processing-note">${state.engine === 'quality' ? 'Quality mode downloads about 366 MB once, then the browser cache is reused. Processing stays on this device.' : 'Fast mode uses a smaller local model and usually starts quicker.'}</span>
       </section>
     </main>`;
   document.querySelector('#themeBtn').addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
 }
 
 async function runRemoval(file) {
+  if (state.engine === 'quality') {
+    try {
+      await runQualityRemoval(file);
+    } catch (error) {
+      console.warn('Quality cutout failed, falling back to fast mode.', error);
+      updateProgress(18, 'Quality model unavailable, using fast fallback…');
+      await runFastRemoval(file);
+      state.processingWarning = 'Quality mode could not run in this browser, so the fast fallback was used.';
+    }
+  } else {
+    await runFastRemoval(file);
+  }
+}
+
+async function runQualityRemoval(file) {
+  const blob = await removeBackgroundQuality(file, updateProgress);
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const cutoutImage = await loadImage(objectUrl);
+    state.originalAlpha = extractAlphaFromCutoutImage(cutoutImage, state.width, state.height);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function runFastRemoval(file) {
   let lastPercent = 0;
   const config = {
-    model: 'isnet_fp16',
+    model: FAST_MODEL_NAME,
     device: navigator.gpu ? 'gpu' : 'cpu',
     output: { format: 'image/png', quality: 1, type: 'foreground' },
     progress: (key, current, total) => {
       if (!total) return;
-      const percent = Math.min(94, Math.round((current / total) * 94));
+      const percent = Math.min(92, Math.round((current / total) * 92));
       lastPercent = Math.max(lastPercent, percent);
-      updateProgress(lastPercent, key.includes('model') ? 'Loading cutout model…' : 'Loading local processor…');
+      updateProgress(lastPercent, key.includes('model') ? 'Loading fast cutout model…' : 'Loading local processor…');
     },
   };
 
@@ -252,13 +304,32 @@ async function runRemoval(file) {
       throw gpuError;
     }
   }
+
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const cutoutImage = await loadImage(objectUrl);
+    state.originalAlpha = extractAlphaFromCutoutImage(cutoutImage, state.width, state.height);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
   updateProgress(100, 'Building editable cutout…');
-  if (state.cutoutObjectUrl) URL.revokeObjectURL(state.cutoutObjectUrl);
-  state.cutoutObjectUrl = URL.createObjectURL(blob);
-  state.cutoutImage = await loadImage(state.cutoutObjectUrl);
+}
+
+function extractAlphaFromCutoutImage(image, width, height) {
+  const extraction = document.createElement('canvas');
+  extraction.width = width;
+  extraction.height = height;
+  const ctx = extraction.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0, width, height);
+  const data = ctx.getImageData(0, 0, width, height).data;
+  const alpha = new Uint8ClampedArray(width * height);
+  for (let i = 0, p = 3; i < alpha.length; i++, p += 4) alpha[i] = data[p];
+  return alpha;
 }
 
 function updateProgress(percent, label) {
+  state.progress = percent;
+  state.progressLabel = label;
   const bar = document.querySelector('#progressBar');
   const text = document.querySelector('#progressLabel');
   if (bar) bar.style.width = `${percent}%`;
@@ -275,18 +346,9 @@ function loadImage(src) {
 }
 
 function buildMaskState() {
-  const extraction = document.createElement('canvas');
-  extraction.width = state.width;
-  extraction.height = state.height;
-  const ctx = extraction.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(state.cutoutImage, 0, 0, state.width, state.height);
-  const data = ctx.getImageData(0, 0, state.width, state.height);
-  state.originalAlpha = new Uint8ClampedArray(state.width * state.height);
-  state.currentAlpha = new Uint8ClampedArray(state.width * state.height);
-  for (let i = 0, p = 3; i < state.originalAlpha.length; i++, p += 4) {
-    state.originalAlpha[i] = data.data[p];
-    state.currentAlpha[i] = data.data[p];
-  }
+  if (!(state.originalAlpha instanceof Uint8ClampedArray)) throw new Error('No alpha mask available to edit.');
+  state.originalAlpha = new Uint8ClampedArray(state.originalAlpha);
+  state.currentAlpha = new Uint8ClampedArray(state.originalAlpha);
 
   state.maskCanvas.width = state.width;
   state.maskCanvas.height = state.height;
@@ -366,6 +428,16 @@ function panelMarkup() {
         <h2>Refine edges</h2>
         <p>Paint only where the automatic cutout needs correction.</p>
       </div>
+      <label class="select-row compact-select-row">
+        <div>
+          <span>Automatic engine</span>
+          <small>Quality is the default. Its first run downloads about 366 MB, then the browser cache is reused.</small>
+        </div>
+        <select id="engineMode">
+          <option value="quality" ${state.engine === 'quality' ? 'selected' : ''}>Quality · BRIA RMBG 2.0</option>
+          <option value="fast" ${state.engine === 'fast' ? 'selected' : ''}>Fast · IMG.LY IS-Net</option>
+        </select>
+      </label>
       <div class="segmented-control">
         <button class="${state.tool === 'erase' ? 'active' : ''}" data-tool="erase">Erase</button>
         <button class="${state.tool === 'restore' ? 'active' : ''}" data-tool="restore">Restore</button>
@@ -465,6 +537,11 @@ function bindPanel() {
     state.tool = button.dataset.tool;
     document.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('active', b === button));
   }));
+
+  document.querySelector('#engineMode')?.addEventListener('change', (e) => {
+    setEngine(e.target.value);
+    showToast(`Automatic cutout engine set to ${engineLabel()}. Click “Run automatic cutout again” to apply it.`);
+  });
 
   bindRange('brushSize', (v) => state.brushSize = Number(v), (v) => `${v}px`);
   bindRange('brushHardness', (v) => state.brushHardness = Number(v) / 100, (v) => `${v}%`);
