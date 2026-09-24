@@ -4,8 +4,12 @@ A private, browser based background remover and cutout editor built for GitHub P
 
 ## What works
 
-- Quality automatic background removal with BRIA RMBG 2.0 in the browser
+- Smart automatic mode that analyzes the image and picks the most promising free cutout method
+- General photo engine with BRIA RMBG 2.0
+- Anime and artwork engine with browser compatible IS-Net Anime
+- Edge aware flat background solver for simple and mostly white backgrounds
 - Fast IMG.LY IS-Net fallback engine
+- Automatic candidate scoring and local edge cleanup
 - Full resolution editable alpha mask
 - Erase and restore brushes with hardness and size controls
 - Undo and redo
@@ -22,11 +26,15 @@ A private, browser based background remover and cutout editor built for GitHub P
 - Trim transparent pixels
 - Light and dark themes
 
+## Smart mode
+
+Smart mode runs completely in the browser. It first looks at image characteristics such as border uniformity, flat color regions, line density, and saturation. It then tests the most relevant local methods and scores the candidate masks before choosing a result.
+
+The original ToonOut model was evaluated for the anime path, but its published weights are PyTorch only and are not directly usable by Transformers.js on GitHub Pages. The deployed site therefore uses `BritishWerewolf/IS-Net-Anime`, which provides browser compatible ONNX weights, while keeping the same anime specific routing idea.
+
 ## Privacy
 
-Image processing happens in the browser. Luvvy removebg does not upload the user's image to an application server.
-
-Quality mode downloads the quantized BRIA RMBG 2.0 web model on first use, then the browser cache is reused. The quality model is roughly 366 MB. Fast mode uses the smaller IMG.LY IS-Net stack. Both run locally in the browser.
+Image processing happens in the browser. Luvvy removebg does not upload the user's image to an application server. Model files download to the browser on first use and are reused from cache when possible.
 
 ## Local development
 
@@ -51,4 +59,4 @@ The Vite base path is configured for:
 
 ## License
 
-The application code is distributed under AGPL 3.0 because it includes `@imgly/background-removal`. Quality mode also loads BRIA RMBG 2.0 model weights under CC BY-NC 4.0 for personal, non-commercial use. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+The application code is distributed under AGPL 3.0 because it includes `@imgly/background-removal`. BRIA RMBG 2.0 is used under its non commercial model license for this personal project. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
