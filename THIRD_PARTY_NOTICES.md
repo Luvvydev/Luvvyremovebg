@@ -2,7 +2,7 @@
 
 ## BRIA RMBG 2.0 Web
 
-Quality mode uses the `kn4666/bria-rmbg-2.0-web` ONNX conversion of BRIA AI RMBG 2.0. The model is loaded from Hugging Face and runs locally in the browser through Transformers.js.
+Smart and general modes use the `kn4666/bria-rmbg-2.0-web` ONNX conversion of BRIA AI RMBG 2.0. The model is loaded from Hugging Face and runs locally in the browser through Transformers.js.
 
 License: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
 
@@ -12,9 +12,25 @@ Original model: `briaai/RMBG-2.0`
 
 Web ONNX conversion: `kn4666/bria-rmbg-2.0-web`
 
+## IS-Net Anime
+
+Smart and anime modes can use `BritishWerewolf/IS-Net-Anime`, a browser compatible ONNX background-removal model intended for anime and illustrated imagery.
+
+License: Apache License 2.0.
+
+Model: https://huggingface.co/BritishWerewolf/IS-Net-Anime
+
+## ToonOut research reference
+
+ToonOut was evaluated as the first anime-specific option because it is fine tuned for anime background removal. Its published model repository currently contains PyTorch weights rather than a Transformers.js compatible ONNX layout, so it is not loaded by the deployed GitHub Pages application.
+
+License: MIT.
+
+Model: https://huggingface.co/joelseytre/toonout
+
 ## @huggingface/transformers
 
-Quality mode uses `@huggingface/transformers` version 4.3.0 to run the RMBG 2.0 ONNX model locally in the browser.
+Smart mode uses `@huggingface/transformers` version 4.3.0 to run supported ONNX models locally in the browser.
 
 License: Apache License 2.0.
 
